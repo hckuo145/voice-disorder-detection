@@ -64,8 +64,8 @@ class GradReverse(Function):
 
 
 class CNN(nn.Module):
-    def __init__(self, input_size, channels, features, separable=False, expand_ratio=None, \
-            activation=None, batch_norm=False):
+    def __init__(self, input_size, channels, n_class, n_domain, separable=False, expand_ratio=None, \
+            activation=None, batch_norm=False, alpha=1.):
         super(CNN, self).__init__()
 
         _sample = torch.randn(2, input_size[0], input_size[1])
@@ -92,70 +92,9 @@ class CNN(nn.Module):
         _sample = self.conv(_sample)
         _batch, _n_channels, _n_features, _n_frames = _sample.size()
 
-        linear = []
         in_features = _n_channels * _n_features * _n_frames
-        for i, out_features in enumerate(features, 1):
-            if i == len(features):
-                linear += [ Linear(in_features, out_features) ]
-            else:
-                linear += [ Linear(in_features, out_features, activation=activation, batch_norm=batch_norm) ]
-            in_features = out_features
-        self.linear = nn.Sequential(*linear)
-
-    def forward(self, x):
-        x = self.inputnorm(x)
-        x = self.downpool(x)
-
-        x = x.unsqueeze(1)
-        hidden = self.conv(x)
-
-        hidden = hidden.flatten(start_dim=1)
-        output = self.linear(hidden)
-
-        return output
-
-
-class DACNN(nn.Module):
-    def __init__(self, input_size, channels, features, separable=False, expand_ratio=None, \
-            activation=None, batch_norm=False, alpha=1.):
-        super(DACNN, self).__init__()
-
-        _sample = torch.randn(2, input_size[0], input_size[1])
-
-        self.inputnorm = nn.InstanceNorm1d(input_size[0])
-        self.downpool  = nn.AvgPool1d(2)
-
-        _sample = self.downpool(_sample)
-
-        conv = []
-        in_channels = 1
-        for out_channels in channels:
-            if separable:
-                conv += [ SepConv2d(in_channels, out_channels, 3, padding=1, \
-                        expand_ratio=expand_ratio, activation=activation, batch_norm=batch_norm) ]
-            else:
-                conv += [ Conv2d(in_channels, out_channels, 3, padding=1, \
-                        activation=activation, batch_norm=batch_norm) ]
-            conv += [ nn.AvgPool2d(2) ]
-            in_channels = out_channels
-        self.conv = nn.Sequential(*conv)
-
-        _sample = _sample.unsqueeze(1)
-        _sample = self.conv(_sample)
-        _batch, _n_channels, _n_features, _n_frames = _sample.size()
-
-        cls_linear, dmn_linear = [], []
-        in_features = _n_channels * _n_features * _n_frames
-        for i, out_features in enumerate(features, 1):
-            if i == len(features):
-                cls_linear += [ Linear(in_features, out_features) ]
-                dmn_linear += [ Linear(in_features, out_features) ]
-            else:
-                cls_linear += [ Linear(in_features, out_features, activation=activation, batch_norm=batch_norm) ]
-                dmn_linear += [ Linear(in_features, out_features, activation=activation, batch_norm=batch_norm) ]
-            in_features = out_features
-        self.cls_linear = nn.Sequential(*cls_linear)
-        self.dmn_linear = nn.Sequential(*dmn_linear)
+        self.cls_linear = Linear(in_features, n_class)
+        self.dmn_linear = Linear(in_features, n_domain)
 
         self.alpha = alpha
 
@@ -174,6 +113,9 @@ class DACNN(nn.Module):
 
         return cls_output, dmn_output
 
+    def num_params(self): 
+        return sum([ param.numel() for name, param in self.named_parameters() if 'dmn_linear' not in name ])
+
 
 
 if __name__ == '__main__':
@@ -184,23 +126,25 @@ if __name__ == '__main__':
     m1 = CNN(
         input_size=[251, 127],
         channels  =[16, 16, 16, 16, 16],
-        features  =[3],
+        n_class   =3,
+        n_domain  =2,
         batch_norm=True,
         activation={'name': 'LeakyReLU', 'args': {'negative_slope': 0.2, 'inplace':True}}
     )
-    cnt1 = count_params(m1)
+    cnt1 = m1.num_params()
     print(cnt1)
 
     m2 = CNN(
         input_size  =[251, 127],
         channels    =[16, 16, 16, 16, 16],
-        features    =[3],
+        n_class     =3,
+        n_domain    =2,
         batch_norm  =True,
         activation  ={'name': 'LeakyReLU', 'args': {'negative_slope': 0.2, 'inplace':True}},
         separable   =True,
         expand_ratio=1.
     )
-    cnt2 = count_params(m2)
+    cnt2 = m2.num_params()
     print(cnt2)
     
     print(f'Compression Ratio: {(cnt1 - cnt2) / cnt1 * 100:4.2f}')
