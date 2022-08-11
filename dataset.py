@@ -8,6 +8,9 @@ from torch.utils.data import Dataset
 
 from typing import Dict
 
+LABEL_DICT  = { 'normal': 0, 'neoplasm': 1, 'phonotrauma': 2 }
+DOMAIN_DICT = { 'clean': 0, 'airconditioner': 1, 'street':2, 'babycry':3 }
+
 
 def wave_to_spectrum(wave, n_fft, hop_length=None, win_length=None, log_fn=None):
     window = torch.hamming_window(win_length).to(wave.device)
@@ -28,17 +31,24 @@ class AudioDataset(Dataset):
     def __init__(self, data_dir, data_list, stft_args, frame_size, phase):
         super(AudioDataset, self).__init__()
 
-
         with open(data_list) as infile:
             lines = infile.readlines()
-
-        self.path_dict = defaultdict(list)
+        
+        self.info = {}
+        self.name_dict = defaultdict(list)
         for line in lines:
-            cls, name = line.strip().split('/')
-            self.path_dict[cls] += [ os.path.join(data_dir, cls, name) ] 
+            name, domain = line.strip().split()
+            label = name.split('/')[0]
 
-        if phase == 'train':
-            self.min_len = min([ len(paths) for paths in self.path_dict.values() ])
+            self.name_dict[label] += [ name ]
+            self.info[name] = {
+                'path'  : os.path.join(data_dir, name),
+                'label' : LABEL_DICT[label],
+                'domain': DOMAIN_DICT[domain] if 'target' in phase else 0
+            }
+
+        if 'train' in phase:
+            self.min_len = min([ len(names) for names in self.name_dict.values() ])
 
         self.phase      = phase
         self.stft_args  = stft_args
@@ -47,33 +57,33 @@ class AudioDataset(Dataset):
         self.resample()
 
     def resample(self):
-        self.paths, self.labels = [], []
+        self.names = []
 
-        for label, paths in enumerate(self.path_dict.values()):
-            if self.phase == 'train':
-                paths = list(np.random.permutation(paths)[:self.min_len])
-                
-            self.paths  += paths
-            self.labels += [label] * len(paths)
-        
-        self.labels = torch.tensor(self.labels, dtype=torch.int64)
+        for _, names in enumerate(self.name_dict.values()):
+            names
+            if 'train' in self.phase:
+                names = list(np.random.permutation(names)[:self.min_len])
+
+            self.names += names
 
     def __getitem__(self, idx):
-        path  = self.paths[idx]
-        label = self.labels[idx]
-        
-        wave = torchaudio.load(path)[0][0]
+        name = self.names[idx]
+
+        wave = torchaudio.load(self.info[name]['path'])[0][0]
         sptrm, _ = wave_to_spectrum(wave, **self.stft_args)
 
         offset = 0
-        if self.phase == 'train':
+        if 'train' in self.phase:
             offset = np.random.randint(sptrm.size(1) - self.frame_size + 1)
         sptrm = sptrm[:, offset:offset+self.frame_size]
 
-        return sptrm, label
+        label  = torch.tensor(self.info[name]['label'], dtype=torch.int64)
+        domain = torch.tensor(self.info[name]['domain'], dtype=torch.int64)
+
+        return sptrm, label, domain
 
     def __len__(self):
-        return len(self.paths)
+        return len(self.names)
 
 
 class ConcatDataset(Dataset):
@@ -94,30 +104,26 @@ class ConcatDataset(Dataset):
 if __name__ == '__main__':
     from torch.utils.data import DataLoader
 
+    source_data_dir = 'data/clean'
+    target_data_dir = 'data/airconditioner'
+    train_data_list = 'data/label/train_list_t0f0.txt'
+    adapt_data_list = 'data/label/adapt_list.txt'
+
     stft_args = {
         'n_fft'     : 500,
         'hop_length': 250,
         'win_length': 500,
         'log_fn'    : 'log10'
     }
-    
-    data_dir  = 'data/clean'
-    data_list = 'data/label/train_list_s0f0.txt'
-    dataset = AudioDataset(data_dir, data_list, stft_args, 127, 'train')
+    frame_size = 127
+
+    dataset = ConcatDataset(
+        AudioDataset(source_data_dir, train_data_list, stft_args, frame_size, 'train_source'),
+        AudioDataset(target_data_dir, adapt_data_list, stft_args, frame_size, 'train_target')
+    )
     loader  = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True, drop_last=True)
 
-    for i, (batch_x, batch_y) in enumerate(loader):
-        print(i, batch_x.size())
-
-    
-    dataset1 = dataset
-    data_dir  = 'data/airconditioner'
-    data_list = 'data/label/dat_list_s0.txt'
-    dataset2  = AudioDataset(data_dir, data_list, stft_args, 127, 'train')
-    dataset   = ConcatDataset(dataset1, dataset2)
-    loader  = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True, drop_last=True)
-
-    for i, (src_batch, tgt_batch) in enumerate(loader):
-        src_x, src_y = src_batch
-        tgt_x, tgt_y = src_batch
-        print(i, src_x.size(), src_y.size(), tgt_x.size(), tgt_y.size())
+    for i, (source_batch, target_batch) in enumerate(loader):
+        source_x, source_cls, source_dmn = source_batch
+        target_x, target_cls, target_dmn = target_batch
+        print(i, source_x.size(), source_cls.size(), source_dmn.size())
