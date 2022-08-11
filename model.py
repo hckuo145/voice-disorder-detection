@@ -64,7 +64,7 @@ class GradReverse(Function):
 
 
 class CNN(nn.Module):
-    def __init__(self, input_size, channels, n_class, n_domain, separable=False, expand_ratio=None, \
+    def __init__(self, input_size, channels, n_class, n_domain, separable=False, expand_ratio=1., \
             activation=None, batch_norm=False, alpha=1.):
         super(CNN, self).__init__()
 

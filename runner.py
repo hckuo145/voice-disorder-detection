@@ -59,7 +59,7 @@ class Runner():
 
     def _update_callback(self, save_best_only=True):
         if not save_best_only:
-            self.save_checkpoint(os.path.join(self.exp_dir, self.title, f'ckpt/epoch_{self.epoch}.pt')) 
+            self.save_checkpoint(os.path.join(self.exp_dir, self.title, f'seed{self.seed}', f'ckpt/epoch_{self.epoch}.pt')) 
 
         for mtr in self.monitor.keys():
             if (self.monitor[mtr]['mode'] == 'min' and self.metrics[mtr] < self.monitor[mtr]['record']) or \
@@ -68,7 +68,7 @@ class Runner():
                 self.monitor[mtr]['record'] = self.metrics[mtr]
                 self.monitor[mtr]['cnt'] = 0
                 
-                self.save_checkpoint(os.path.join(self.exp_dir, self.title, f'ckpt/best_{"_".join(mtr.split("/"))}.pt')) 
+                self.save_checkpoint(os.path.join(self.exp_dir, self.title, f'seed{self.seed}', f'ckpt/best_{"_".join(mtr.split("/"))}.pt')) 
                 
             else:
                 self.monitor[mtr]['cnt'] += 1
@@ -220,7 +220,7 @@ class Runner():
 
     @torch.no_grad()
     def test(self, checkpoint=None):
-        self.load_checkpoint(checkpoint)
+        self.load_checkpoint(checkpoint, params_only=True)
 
         self.model.eval()
         source_true, source_pred = [], []

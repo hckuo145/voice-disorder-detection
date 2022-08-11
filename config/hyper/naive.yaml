@@ -1,0 +1,34 @@
+mode: 'naive'
+
+exp_dir: './exp'
+log_dir: './log'
+
+source_data_dir: './data/clean' 
+target_data_dir: './data/airconditioner'
+adapt_data_list: './data/label/adapt_list.txt'
+train_data_list: './data/label/train_list_k{kfold_idx}f{test_fold}.txt'
+valid_data_list: './data/label/test_list_k{kfold_idx}f{test_fold}.txt'
+test_data_list : './data/label/test_list_k{kfold_idx}f{test_fold}.txt'
+
+dataset_args:
+  stft_args:
+    n_fft    : 500
+    hop_length: 250
+    win_length: 500
+    log_fn    : 'log10'
+
+  frame_size: 127
+
+optim : {'name': 'Adam', 'args': {'lr': 0.001}}
+weight: null
+
+monitor:
+    valid/source/uar:
+        mode: 'max'
+    valid/source/cls_loss:
+        mode: 'min'
+save_best_only: True
+
+patience : 20
+min_epoch: 300
+max_epoch: -1
