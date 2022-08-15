@@ -70,7 +70,6 @@ class CNN(nn.Module):
 
         _sample = torch.randn(2, input_size[0], input_size[1])
 
-        self.inputnorm = nn.InstanceNorm1d(input_size[0])
         self.downpool  = nn.AvgPool1d(2)
 
         _sample = self.downpool(_sample)
@@ -99,7 +98,6 @@ class CNN(nn.Module):
         self.alpha = alpha
 
     def forward(self, x):
-        x = self.inputnorm(x)
         x = self.downpool(x)
 
         x = x.unsqueeze(1)
@@ -119,10 +117,6 @@ class CNN(nn.Module):
 
 
 if __name__ == '__main__':
-    def count_params(model):
-        print([ p.numel() for p in model.parameters() ])
-        return sum( p.numel() for p in model.parameters() )
-
     m1 = CNN(
         input_size=[251, 127],
         channels  =[16, 16, 16, 16, 16],
