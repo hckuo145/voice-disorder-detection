@@ -1,15 +1,15 @@
-kfold_idx=20
+kfold_idx=0
 
 for ((test_fold=0; test_fold<5; test_fold++))
 do
-     title=CNN_naive_k${kfold_idx}f${test_fold}
+     title=StdCNN_naive_k${kfold_idx}f${test_fold}
 
      for ((seed=0; seed<200; seed++))
      do
-          cmd="--title $title --seed $seed --device cuda --batch 30 \
-               --kfold_idx $kfold_idx --test_fold $test_fold        \
-               --model_conf config/model/CNN.yaml                   \
-               --hyper_conf config/hyper/naive.yaml                 \
+          cmd="--title $title --seed $seed --device cuda:0 --batch 30 \
+               --kfold_idx $kfold_idx --test_fold $test_fold          \
+               --model_conf config/model/StdCNN.yaml                     \
+               --hyper_conf config/hyper/naive.yaml                   \
                --params exp/$title/seed$seed/ckpt/best_valid_src_uar.pt"
 
           mkdir -p exp/${title}/seed${seed}
