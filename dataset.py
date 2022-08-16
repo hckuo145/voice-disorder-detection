@@ -45,9 +45,13 @@ class AudioDataset(Dataset):
             name, domain = line.strip().split()
             label = name.split('/')[0]
 
+            path = os.path.join(data_dir, name)
+            wave = torchaudio.load(path)[0][0]
+            sptrm, _ = wave_to_spectrum(wave, **stft_args)
+
             self.name_dict[label] += [ name ]
             self.info[name] = {
-                'path'  : os.path.join(data_dir, name),
+                'sptrm' : sptrm,
                 'label' : LABEL_DICT[label],
                 'domain': DOMAIN_DICT[domain] if 'target' in phase else 0
             }
@@ -56,7 +60,6 @@ class AudioDataset(Dataset):
             self.min_len = min([ len(names) for names in self.name_dict.values() ])
 
         self.phase      = phase
-        self.stft_args  = stft_args
         self.frame_size = frame_size
 
         self.resample()
@@ -73,16 +76,14 @@ class AudioDataset(Dataset):
     def __getitem__(self, idx):
         name = self.names[idx]
 
-        wave = torchaudio.load(self.info[name]['path'])[0][0]
-        sptrm, _ = wave_to_spectrum(wave, **self.stft_args)
-
+        sptrm  = self.info[name]['sptrm']
+        label  = torch.tensor(self.info[name]['label'] , dtype=torch.int64)
+        domain = torch.tensor(self.info[name]['domain'], dtype=torch.int64)
+        
         offset = 0
         if 'train' in self.phase:
             offset = np.random.randint(sptrm.size(0) - self.frame_size + 1)
         sptrm = sptrm[offset:offset+self.frame_size]
-
-        label  = torch.tensor(self.info[name]['label'] , dtype=torch.int64)
-        domain = torch.tensor(self.info[name]['domain'], dtype=torch.int64)
 
         return sptrm, label, domain
 
