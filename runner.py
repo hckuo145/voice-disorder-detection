@@ -172,7 +172,8 @@ class Runner():
 
             self.model.train()
             self.loader['train'].dataset.resample()
-            for i, (source_batch, target_batch) in enumerate(tqdm(self.loader['train'])):
+            # for i, (source_batch, target_batch) in enumerate(tqdm(self.loader['train'])):
+            for i, (source_batch, target_batch) in enumerate(self.loader['train']):
                 source_batch = list(map(lambda item: item.to(self.device), source_batch))
                 target_batch = list(map(lambda item: item.to(self.device), target_batch))
                 self._train_step(source_batch, target_batch, self.mode)
@@ -181,7 +182,8 @@ class Runner():
             self.model.eval()
             source_true, source_pred = [], []
             target_true, target_pred = [], []
-            for i, (source_batch, target_batch) in enumerate(tqdm(self.loader['valid'])):
+            # for i, (source_batch, target_batch) in enumerate(tqdm(self.loader['valid'])):
+            for i, (source_batch, target_batch) in enumerate(self.loader['valid']):
                 source_batch = list(map(lambda item: item.to(self.device), source_batch))
                 target_batch = list(map(lambda item: item.to(self.device), target_batch))
                 pred_source_cls, pred_target_cls = self._valid_step(source_batch, target_batch, self.mode)
@@ -214,7 +216,7 @@ class Runner():
                     else:       
                         self.metrics[key] = value / len(self.loader['valid'].dataset)
 
-            self._display('Train', self.epoch, **self.metrics)
+            # self._display('Train', self.epoch, **self.metrics)
             
             self._write_to_tensorboard(self.epoch)
             

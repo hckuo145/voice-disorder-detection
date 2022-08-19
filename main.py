@@ -42,7 +42,7 @@ torch.backends.cudnn.deterministic = True
 device = torch.device(args.device)
 
 
-print(args.title, flush=True)
+print(f'{args.title}, seed {args.seed}', flush=True)
 
 model = CNN(**model_args).to(device)
 n_params = sum( p.numel() for p in model.parameters() )
@@ -64,9 +64,8 @@ if args.train:
     }
 
     loader = {
-        'train': DataLoader(dataset['train'], batch_size=args.batch, num_workers=4, pin_memory=True, \
-            shuffle=True, drop_last=True),
-        'valid': DataLoader(dataset['valid'], batch_size=args.batch, num_workers=4, pin_memory=True)
+        'train': DataLoader(dataset['train'], batch_size=args.batch, pin_memory=True, shuffle=True, drop_last=True),
+        'valid': DataLoader(dataset['valid'], batch_size=args.batch, pin_memory=True)
     }
 
     criterion = {
@@ -75,6 +74,7 @@ if args.train:
     }
     optimizer = getattr(optim, args.optim['name'])(model.parameters(), **args.optim['args'])
 
+    print('Start Training ...', flush=True)
     runner = Runner(model, loader, device, criterion, optimizer, args=args)
     runner.train()
 
