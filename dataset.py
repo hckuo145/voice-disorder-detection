@@ -33,7 +33,7 @@ def wave_to_spectrum(wave, n_fft, hop_length=None, win_length=None, log_fn=None,
 
 
 class AudioDataset(Dataset):
-    def __init__(self, data_dir, data_list, stft_args, frame_size, phase):
+    def __init__(self, data_dir, data_list, stft_args, frame_size, phase, device=None):
         super(AudioDataset, self).__init__()
 
         with open(data_list) as infile:
@@ -51,15 +51,18 @@ class AudioDataset(Dataset):
 
             self.name_dict[label] += [ name ]
             self.info[name] = {
-                'sptrm' : sptrm,
-                'label' : LABEL_DICT[label],
-                'domain': DOMAIN_DICT[domain] if 'target' in phase else 0
+                'sptrm' : sptrm.to(device),
+                'label' : torch.tensor(LABEL_DICT[label], dtype=torch.int64, device=device),
+                'domain': torch.tensor(DOMAIN_DICT[domain], dtype=torch.int64, device=device) \
+                    if 'target' in phase else torch.tensor(0, dtype=torch.int64, device=device)
             }
 
         if 'train' in phase:
             self.min_len = min([ len(names) for names in self.name_dict.values() ])
 
+
         self.phase      = phase
+        self.device     = device
         self.frame_size = frame_size
 
         self.resample()
@@ -77,8 +80,8 @@ class AudioDataset(Dataset):
         name = self.names[idx]
 
         sptrm  = self.info[name]['sptrm']
-        label  = torch.tensor(self.info[name]['label'] , dtype=torch.int64)
-        domain = torch.tensor(self.info[name]['domain'], dtype=torch.int64)
+        label  = self.info[name]['label'] 
+        domain = self.info[name]['domain']
         
         offset = 0
         if 'train' in self.phase:

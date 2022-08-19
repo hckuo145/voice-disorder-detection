@@ -1,4 +1,5 @@
 import yaml
+import time
 import argparse
 import numpy as np
 
@@ -36,47 +37,73 @@ with open(args.model_conf) as conf:
     model_args = yaml.load(conf, Loader=yaml.Loader)
 
 
-np.random.seed(args.seed)
-torch.manual_seed(args.seed)
+# np.random.seed(args.seed)
+# torch.manual_seed(args.seed)
 torch.backends.cudnn.deterministic = True
 device = torch.device(args.device)
 
 
-print(f'{args.title}, seed {args.seed}', flush=True)
+# print(f'{args.title}, seed {args.seed}', flush=True)
 
-model = CNN(**model_args).to(device)
-n_params = sum( p.numel() for p in model.parameters() )
-print(f'[Model] -# params: {n_params}', flush=True)
+# model = CNN(**model_args).to(device)
+# n_params = sum( p.numel() for p in model.parameters() )
+# print(f'[Model] -# params: {n_params}', flush=True)
 
 if args.train:
+    t1 = time.time()
+    print('Preprocess Data ... ', end='', flush=True)
+    
     args.train_data_list = args.train_data_list.format(kfold_idx=args.kfold_idx, test_fold=args.test_fold)
     args.valid_data_list = args.valid_data_list.format(kfold_idx=args.kfold_idx, test_fold=args.test_fold)
 
     dataset = {
         'train': ConcatDataset(
-            AudioDataset(args.source_data_dir, args.train_data_list, **args.dataset_args, phase='train_source'),
-            AudioDataset(args.target_data_dir, args.adapt_data_list, **args.dataset_args, phase='train_target')
+            AudioDataset(args.source_data_dir, args.train_data_list, **args.dataset_args, phase='train_source', device=device),
+            AudioDataset(args.target_data_dir, args.adapt_data_list, **args.dataset_args, phase='train_target', device=device)
         ),
         'valid': ConcatDataset(
-            AudioDataset(args.source_data_dir, args.valid_data_list, **args.dataset_args, phase='valid_source'),
-            AudioDataset(args.target_data_dir, args.valid_data_list, **args.dataset_args, phase='valid_target')
+            AudioDataset(args.source_data_dir, args.valid_data_list, **args.dataset_args, phase='valid_source', device=device),
+            AudioDataset(args.target_data_dir, args.valid_data_list, **args.dataset_args, phase='valid_target', device=device)
         )
     }
+    
+    t2 = time.time()
+    print(f'cost {int(t2 - t1)}s', flush=True)
 
+    # loader = {
+    #     'train': DataLoader(dataset['train'], batch_size=args.batch, pin_memory=True, shuffle=True, drop_last=True),
+    #     'valid': DataLoader(dataset['valid'], batch_size=args.batch, pin_memory=True)
+    # }
     loader = {
-        'train': DataLoader(dataset['train'], batch_size=args.batch, pin_memory=True, shuffle=True, drop_last=True),
-        'valid': DataLoader(dataset['valid'], batch_size=args.batch, pin_memory=True)
+        'train': DataLoader(dataset['train'], batch_size=args.batch, shuffle=True, drop_last=True),
+        'valid': DataLoader(dataset['valid'], batch_size=args.batch)
     }
 
     criterion = {
         'cls': nn.CrossEntropyLoss().to(device),
         'dmn': nn.CrossEntropyLoss(torch.FloatTensor(args.weight) if args.weight is not None else None).to(device)
     }
-    optimizer = getattr(optim, args.optim['name'])(model.parameters(), **args.optim['args'])
 
-    print('Start Training ...', flush=True)
-    runner = Runner(model, loader, device, criterion, optimizer, args=args)
-    runner.train()
+    for seed in range(10):
+        args.seed = seed
+
+        print(f'\n{args.title}, seed {args.seed}', flush=True)
+
+        model = CNN(**model_args).to(device)
+        n_params = sum( p.numel() for p in model.parameters() )
+        print(f'[Model] -# params: {n_params}', flush=True)
+
+        optimizer = getattr(optim, args.optim['name'])(model.parameters(), **args.optim['args'])
+
+        t1 = time.time()
+        print('Start Training ... ', end='', flush=True)
+        
+        runner = Runner(model, loader, device, criterion, optimizer, args=args)
+        runner.train()
+        
+        t2 = time.time()
+        print(f'cost {int(t2 - t1)}s', flush=True)
+
 
 if args.test:
     args.test_data_list = args.test_data_list.format(kfold_idx=args.kfold_idx, test_fold=args.test_fold)
@@ -91,6 +118,12 @@ if args.test:
     loader = {
         'test': DataLoader(dataset['test'], batch_size=args.batch, num_workers=4, pin_memory=True)
     }
+
+    print(f'\n{args.title}, seed {args.seed}', flush=True)
+
+    model = CNN(**model_args).to(device)
+    n_params = sum( p.numel() for p in model.parameters() )
+    print(f'[Model] -# params: {n_params}', flush=True)
 
     runner = Runner(model, loader, device, args=args)
     runner.test(args.params)

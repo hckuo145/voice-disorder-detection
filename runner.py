@@ -19,7 +19,7 @@ class Runner():
         self.optimizer = optimizer
 
         if args.train:
-            self.writer = SummaryWriter(os.path.join(args.log_dir, args.title))
+            self.writer = SummaryWriter(os.path.join(args.log_dir, args.title, f'seed{args.seed}'))
 
         if args.patience != -1 and args.max_epoch == -1:
             args.max_epoch = np.iinfo(int).max
@@ -174,8 +174,8 @@ class Runner():
             self.loader['train'].dataset.resample()
             # for i, (source_batch, target_batch) in enumerate(tqdm(self.loader['train'])):
             for i, (source_batch, target_batch) in enumerate(self.loader['train']):
-                source_batch = list(map(lambda item: item.to(self.device), source_batch))
-                target_batch = list(map(lambda item: item.to(self.device), target_batch))
+                # source_batch = list(map(lambda item: item.to(self.device), source_batch))
+                # target_batch = list(map(lambda item: item.to(self.device), target_batch))
                 self._train_step(source_batch, target_batch, self.mode)
 
 
@@ -184,8 +184,8 @@ class Runner():
             target_true, target_pred = [], []
             # for i, (source_batch, target_batch) in enumerate(tqdm(self.loader['valid'])):
             for i, (source_batch, target_batch) in enumerate(self.loader['valid']):
-                source_batch = list(map(lambda item: item.to(self.device), source_batch))
-                target_batch = list(map(lambda item: item.to(self.device), target_batch))
+                # source_batch = list(map(lambda item: item.to(self.device), source_batch))
+                # target_batch = list(map(lambda item: item.to(self.device), target_batch))
                 pred_source_cls, pred_target_cls = self._valid_step(source_batch, target_batch, self.mode)
 
                 source_pred += list(torch.argmax(pred_source_cls, dim=1).cpu().numpy())
@@ -250,7 +250,7 @@ class Runner():
         source_confusions = multilabel_confusion_matrix(source_true, source_pred)
         target_confusions = multilabel_confusion_matrix(target_true, target_pred)
         source_recalls = [ mat[1, 1] / (mat[1, 0] + mat[1, 1]) for mat in source_confusions ]
-        target_recalls = [ mat[1, 1] / (mat[1, 0] + mat[1, 1]) for mat in target_confusions ]
+        target_recalls = [ mat[1, 1] / (mat[1, 0] + mat[1, 1]) for mat in target_confusions ] 
         
         self.metrics['test/avg_uar'] = (np.mean(source_recalls)+ np.mean(target_recalls)) / 2
         self.metrics['test/src_uar'] = np.mean(source_recalls)
