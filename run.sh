@@ -1,27 +1,19 @@
-kfold_idx=0
-test_fold=0
+mode=naive
+model=StdCNN
+kfold_idx=15
 
-# device=cuda:$(((4 * ${kfold_idx} + ${test_fold} - 1) % 8))
-device=cuda
+device=cuda:$((kfold_idx%8))
 echo ${device}
 
+for ((test_fold=0; test_fold<5; test_fold++))
+do
+     title=${model}_${mode}_k${kfold_idx}f${test_fold}
+     echo ${title}
 
-title=StdCNN_naive_k${kfold_idx}f${test_fold}
+     cmd="--title ${title} --device ${device} --batch 30    \
+          --kfold_idx ${kfold_idx} --test_fold ${test_fold} \
+          --model_conf config/model/${model}.yaml           \
+          --hyper_conf config/hyper/${mode}.yaml"
 
-cmd="--title ${title} --device ${device} --batch 30    \
-     --kfold_idx ${kfold_idx} --test_fold ${test_fold} \
-     --model_conf config/model/StdCNN.yaml             \
-     --hyper_conf config/hyper/naive.yaml"
-     
-python main.py --train ${cmd}
-
-
-
-# title=SepCNN_naive_k${kfold_idx}f${test_fold}
-
-# cmd="--title ${title} --device ${device} --batch 30    \
-#      --kfold_idx ${kfold_idx} --test_fold ${test_fold} \
-#      --model_conf config/model/SepCNN.yaml             \
-#      --hyper_conf config/hyper/naive.yaml"                         
-
-# python main.py --train ${cmd}
+     python main.py --train ${cmd}
+done

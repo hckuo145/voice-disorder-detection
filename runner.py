@@ -150,10 +150,10 @@ class Runner():
 
         if   mode == 'naive':
             loss = source_cls_loss
-        elif mode == 'adapt':
-            loss = source_cls_loss + (source_dmn_loss + target_dmn_loss) / 2
         elif mode == 'joint':
             loss = (source_cls_loss + target_cls_loss) / 2
+        elif mode == 'adapt':
+            loss = source_cls_loss + (source_dmn_loss + target_dmn_loss) / 2
 
         self.metrics['valid/loss']         += loss.item() * len(source_x)
         self.metrics['valid/src_cls_loss'] += source_cls_loss.item() * len(source_x)

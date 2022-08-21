@@ -1,0 +1,9 @@
+input_size  : [127, 251]
+channels    : [16, 16, 16, 16, 16]
+n_class     : 3
+n_domain    : 3
+batch_norm  : True
+activation  : {'name': 'LeakyReLU', 'args': {'negative_slope': 0.2, 'inplace':True}}
+separable   : True
+expand_ratio: 1.
+alpha       : 0.05

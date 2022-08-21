@@ -70,10 +70,6 @@ if args.train:
     t2 = time.time()
     print(f'cost {int(t2 - t1)}s', flush=True)
 
-    # loader = {
-    #     'train': DataLoader(dataset['train'], batch_size=args.batch, pin_memory=True, shuffle=True, drop_last=True),
-    #     'valid': DataLoader(dataset['valid'], batch_size=args.batch, pin_memory=True)
-    # }
     loader = {
         'train': DataLoader(dataset['train'], batch_size=args.batch, shuffle=True, drop_last=True),
         'valid': DataLoader(dataset['valid'], batch_size=args.batch)
@@ -84,9 +80,12 @@ if args.train:
         'dmn': nn.CrossEntropyLoss(torch.FloatTensor(args.weight) if args.weight is not None else None).to(device)
     }
 
-    for seed in range(10):
+    for seed in range(200):
         args.seed = seed
 
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        
         print(f'\n{args.title}, seed {args.seed}', flush=True)
 
         model = CNN(**model_args).to(device)

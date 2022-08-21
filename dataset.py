@@ -53,8 +53,8 @@ class AudioDataset(Dataset):
             self.info[name] = {
                 'sptrm' : sptrm.to(device),
                 'label' : torch.tensor(LABEL_DICT[label], dtype=torch.int64, device=device),
-                'domain': torch.tensor(DOMAIN_DICT[domain], dtype=torch.int64, device=device) \
-                    if 'target' in phase else torch.tensor(0, dtype=torch.int64, device=device)
+                'domain': torch.tensor(DOMAIN_DICT[domain], dtype=torch.int64, device=device) if 'target' in phase \
+                    else torch.tensor(DOMAIN_DICT['clean'], dtype=torch.int64, device=device)
             }
 
         if 'train' in phase:
@@ -140,5 +140,5 @@ if __name__ == '__main__':
         for i, (source_batch, target_batch) in enumerate(loader):
             source_x, source_cls, source_dmn = source_batch
             target_x, target_cls, target_dmn = target_batch
-            print(i, source_x.size(), source_cls.size(), source_dmn.size())
-            # print(target_dmn)
+            # print(i, source_x.size(), source_cls.size(), source_dmn.size())
+            print(source_dmn, target_dmn)

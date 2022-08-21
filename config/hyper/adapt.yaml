@@ -1,4 +1,4 @@
-mode: 'naive'
+mode: 'adapt'
 
 exp_dir: './exp'
 log_dir: './log'
@@ -21,11 +21,17 @@ dataset_args:
   frame_size: 127
 
 optim : {'name': 'Adam', 'args': {'lr': 0.001}}
-weight: null
+weight: [0.67, 1.33, 1.33]
 
 monitor:
+  valid/avg_uar:
+    mode: 'max'
   valid/src_uar:
     mode: 'max'
+  valid/tgt_uar:
+    mode: 'max'
+  valid/loss:
+    mode: 'min'
   valid/src_cls_loss:
     mode: 'min'
 save_best_only: True
