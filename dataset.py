@@ -60,7 +60,6 @@ class AudioDataset(Dataset):
         if 'train' in phase:
             self.min_len = min([ len(names) for names in self.name_dict.values() ])
 
-
         self.phase      = phase
         self.device     = device
         self.frame_size = frame_size

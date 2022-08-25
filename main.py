@@ -1,3 +1,4 @@
+from re import A
 import yaml
 import time
 import argparse
@@ -17,11 +18,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--test'  , action='store_true', default=False)
 parser.add_argument('--train' , action='store_true', default=False)
     
-parser.add_argument('--seed'  , type=int, default=0)
-parser.add_argument('--batch' , type=int, default=32)
-parser.add_argument('--title' , type=str, default='Untitled')
-parser.add_argument('--device', type=str, default='cuda')
-parser.add_argument('--params', type=str, default=None)
+parser.add_argument('--seed'   , type=int, default=0)
+parser.add_argument('--batch'  , type=int, default=32)
+parser.add_argument('--title'  , type=str, default='Untitled')
+parser.add_argument('--device' , type=str, default='cuda')
+parser.add_argument('--params' , type=str, default=None)
+parser.add_argument('--logfile', type=str, default=None)
 
 parser.add_argument('--kfold_idx', type=int, default=0)
 parser.add_argument('--test_fold', type=int, default=0)
@@ -37,17 +39,9 @@ with open(args.model_conf) as conf:
     model_args = yaml.load(conf, Loader=yaml.Loader)
 
 
-# np.random.seed(args.seed)
-# torch.manual_seed(args.seed)
 torch.backends.cudnn.deterministic = True
 device = torch.device(args.device)
 
-
-# print(f'{args.title}, seed {args.seed}', flush=True)
-
-# model = CNN(**model_args).to(device)
-# n_params = sum( p.numel() for p in model.parameters() )
-# print(f'[Model] -# params: {n_params}', flush=True)
 
 if args.train:
     t1 = time.time()
@@ -66,14 +60,15 @@ if args.train:
             AudioDataset(args.target_data_dir, args.valid_data_list, **args.dataset_args, phase='valid_target', device=device)
         )
     }
-    
-    t2 = time.time()
-    print(f'cost {int(t2 - t1)}s', flush=True)
 
     loader = {
         'train': DataLoader(dataset['train'], batch_size=args.batch, shuffle=True, drop_last=True),
         'valid': DataLoader(dataset['valid'], batch_size=args.batch)
     }
+    
+    t2 = time.time()
+    print(f'cost {int(t2 - t1)}s', flush=True)
+
 
     criterion = {
         'cls': nn.CrossEntropyLoss().to(device),
@@ -82,7 +77,6 @@ if args.train:
 
     for seed in range(200):
         args.seed = seed
-
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
         
@@ -105,24 +99,44 @@ if args.train:
 
 
 if args.test:
+    t1 = time.time()
+    print('Preprocess Data ... ', end='', flush=True)
+
     args.test_data_list = args.test_data_list.format(kfold_idx=args.kfold_idx, test_fold=args.test_fold)
 
     dataset = {
         'test': ConcatDataset(
-            AudioDataset(args.source_data_dir, args.test_data_list, **args.dataset_args, phase='test_source'),
-            AudioDataset(args.target_data_dir, args.test_data_list, **args.dataset_args, phase='test_target')
+            AudioDataset(args.source_data_dir, args.test_data_list, **args.dataset_args, phase='test_source', device=device),
+            AudioDataset(args.target_data_dir, args.test_data_list, **args.dataset_args, phase='test_target', device=device)
         )
     }
 
     loader = {
-        'test': DataLoader(dataset['test'], batch_size=args.batch, num_workers=4, pin_memory=True)
+        'test': DataLoader(dataset['test'], batch_size=args.batch)
     }
 
-    print(f'\n{args.title}, seed {args.seed}', flush=True)
+    t2 = time.time()
+    print(f'cost {int(t2 - t1)}s', flush=True)
+
 
     model = CNN(**model_args).to(device)
     n_params = sum( p.numel() for p in model.parameters() )
     print(f'[Model] -# params: {n_params}', flush=True)
 
-    runner = Runner(model, loader, device, args=args)
-    runner.test(args.params)
+    for seed in range(200):
+        args.seed = seed
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+
+        args.params = f'{args.exp_dir}/{args.title}/seed{args.seed}/ckpt/best_valid_avg_uar.pt'
+
+        print(f'\n{args.title}, seed {args.seed}', flush=True)
+
+        t1 = time.time()
+        print('Start Testing ... ', end='', flush=True)
+        
+        runner = Runner(model, loader, device, args=args)
+        runner.test(args.params)
+
+        t2 = time.time()
+        print(f'cost {int(t2 - t1)}s', flush=True)

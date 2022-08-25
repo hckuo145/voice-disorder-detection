@@ -1,3 +1,4 @@
+from cmath import log
 import os
 import torch
 import numpy as np
@@ -85,7 +86,7 @@ class Runner():
 
 
     @staticmethod
-    def _display(phase='Train', iteration=None, **kwargs):
+    def _display(phase='Train', iteration=None, logfile=None, **kwargs):
         disp = f'[{phase}]'
 
         if iteration is not None:
@@ -97,7 +98,12 @@ class Runner():
             else:
                 disp += f" - {'_'.join(key.split('/'))}: {value * 100:4.2f}"
         
-        print(disp, flush=True)
+        if logfile is not None:
+            with open(logfile, 'a') as f:
+                print(disp, file=f, flush=True)        
+        else:
+            print(disp, flush=True)
+
 
 
     def _train_step(self, source_batch, target_batch, mode='naive'):
@@ -173,7 +179,7 @@ class Runner():
             self.model.train()
             self.loader['train'].dataset.resample()
             # for i, (source_batch, target_batch) in enumerate(tqdm(self.loader['train'])):
-            for i, (source_batch, target_batch) in enumerate(self.loader['train']):
+            for source_batch, target_batch in self.loader['train']:
                 # source_batch = list(map(lambda item: item.to(self.device), source_batch))
                 # target_batch = list(map(lambda item: item.to(self.device), target_batch))
                 self._train_step(source_batch, target_batch, self.mode)
@@ -183,7 +189,7 @@ class Runner():
             source_true, source_pred = [], []
             target_true, target_pred = [], []
             # for i, (source_batch, target_batch) in enumerate(tqdm(self.loader['valid'])):
-            for i, (source_batch, target_batch) in enumerate(self.loader['valid']):
+            for source_batch, target_batch in self.loader['valid']:
                 # source_batch = list(map(lambda item: item.to(self.device), source_batch))
                 # target_batch = list(map(lambda item: item.to(self.device), target_batch))
                 pred_source_cls, pred_target_cls = self._valid_step(source_batch, target_batch, self.mode)
@@ -232,20 +238,21 @@ class Runner():
         self.model.eval()
         source_true, source_pred = [], []
         target_true, target_pred = [], []
-        for source_batch, target_batch in tqdm(self.loader['test']):
+        # for source_batch, target_batch in tqdm(self.loader['test']):
+        for source_batch, target_batch in self.loader['test']:
             source_x, source_cls, _ = source_batch
             target_x, target_cls, _ = target_batch
     
-            source_x = source_x.to(self.device)
-            target_x = target_x.to(self.device)
+            # source_x = source_x.to(self.device)
+            # target_x = target_x.to(self.device)
             
             pred_source_cls, _ = self.model(source_x)
             pred_target_cls, _ = self.model(target_x)
             
             source_pred += list(torch.argmax(pred_source_cls, dim=1).cpu().numpy())
             target_pred += list(torch.argmax(pred_target_cls, dim=1).cpu().numpy())
-            source_true += list(source_cls.numpy())
-            target_true += list(target_cls.numpy())
+            source_true += list(source_cls.cpu().numpy())
+            target_true += list(target_cls.cpu().numpy())
         
         source_confusions = multilabel_confusion_matrix(source_true, source_pred)
         target_confusions = multilabel_confusion_matrix(target_true, target_pred)
@@ -262,4 +269,4 @@ class Runner():
         self.metrics['test/tgt_neo'] = target_recalls[1]
         self.metrics['test/tgt_pho'] = target_recalls[2]
 
-        self._display('Test', **self.metrics)
+        self._display(f'seed{self.seed}', logfile=self.logfile, **self.metrics)
