@@ -1,4 +1,3 @@
-from re import A
 import yaml
 import time
 import argparse
@@ -15,8 +14,9 @@ from dataset import AudioDataset, ConcatDataset
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--test'  , action='store_true', default=False)
-parser.add_argument('--train' , action='store_true', default=False)
+parser.add_argument('--test'    , action='store_true', default=False)
+parser.add_argument('--train'   , action='store_true', default=False)
+parser.add_argument('--finetune', action='store_true', default=False)
     
 parser.add_argument('--seed'   , type=int, default=0)
 parser.add_argument('--batch'  , type=int, default=32)
@@ -52,7 +52,8 @@ if args.train:
 
     dataset = {
         'train': ConcatDataset(
-            AudioDataset(args.source_data_dir, args.train_data_list, **args.dataset_args, phase='train_source', device=device),
+            AudioDataset(args.source_data_dir, args.train_data_list, **args.dataset_args, phase='train_source', device=device) \
+                if not args.finetune else AudioDataset(args.target_data_dir, args.train_data_list, **args.dataset_args, phase='train_target', device=device),
             AudioDataset(args.target_data_dir, args.adapt_data_list, **args.dataset_args, phase='train_target', device=device)
         ),
         'valid': ConcatDataset(
@@ -92,6 +93,9 @@ if args.train:
         print('Start Training ... ', end='', flush=True)
         
         runner = Runner(model, loader, device, criterion, optimizer, args=args)
+        if args.finetune:
+            params = args.params.format(exp_dir=args.exp_dir, seed=args.seed)
+            runner.load_checkpoint(params, params_only=True)
         runner.train()
         
         t2 = time.time()
@@ -103,6 +107,7 @@ if args.test:
     print('Preprocess Data ... ', end='', flush=True)
 
     args.test_data_list = args.test_data_list.format(kfold_idx=args.kfold_idx, test_fold=args.test_fold)
+    args.logfile = args.logfile.format(exp_dir=args.exp_dir)
 
     dataset = {
         'test': ConcatDataset(

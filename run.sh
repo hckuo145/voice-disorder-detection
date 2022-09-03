@@ -1,6 +1,6 @@
-# mode=adapt
-# model=SepDACNN_a1
-# kfold_idx=15
+# mode=target
+# model=SepCNN
+# kfold_idx=0
 
 # device=cuda:$((kfold_idx%8))
 # echo ${device}
@@ -19,25 +19,47 @@
 # done
 
 
-mode=adapt
-model=SepDACNN_a1
+mode=finetune
+model=SepCNN
+kfold_idx=0
 
-for ((kfold_idx=0; kfold_idx<16; kfold_idx++))
+device=cuda:$((kfold_idx%8))
+echo ${device}
+
+for ((test_fold=0; test_fold<5; test_fold++))
 do
-     for ((test_fold=0; test_fold<5; test_fold++))
-     do
-          title=${model}_${mode}_k${kfold_idx}f${test_fold}
-          echo -e "\n${title}"
+     title=${model}_${mode}_k${kfold_idx}f${test_fold}
+     params={exp_dir}/${model}_naive_k${kfold_idx}f${test_fold}/seed{seed}/ckpt/best_valid_src_uar.pt
+     echo -e "\n${title}"
 
-          cmd="--title ${title} --device cuda:0 --batch 30       \
-               --kfold_idx ${kfold_idx} --test_fold ${test_fold} \
-               --model_conf config/model/${model}.yaml           \
-               --hyper_conf config/hyper/${mode}.yaml            \
-               --logfile exp/${title}/record.txt"
+     cmd="--title ${title} --device ${device} --batch 30    \
+          --kfold_idx ${kfold_idx} --test_fold ${test_fold} \
+          --model_conf config/model/${model}.yaml           \
+          --hyper_conf config/hyper/${mode}.yaml            \
+          --params ${params}"
 
-          python main.py --test ${cmd}
-
-          # rm exp/${title}/record.txt
-     done
+     python main.py --train --finetune ${cmd}
 done
 
+
+# mode=adapt
+# model=SepDACNN_a001
+
+# for ((kfold_idx=0; kfold_idx<16; kfold_idx++))
+# do
+#      for ((test_fold=0; test_fold<5; test_fold++))
+#      do
+#           title=${model}_${mode}_k${kfold_idx}f${test_fold}
+#           echo -e "\n${title}"
+
+#           cmd="--title ${title} --device cuda:0 --batch 30       \
+#                --kfold_idx ${kfold_idx} --test_fold ${test_fold} \
+#                --model_conf config/model/${model}.yaml           \
+#                --hyper_conf config/hyper/${mode}.yaml            \
+#                --logfile {exp_dir}/${title}/record.txt"
+
+#           python main.py --test ${cmd}
+
+#           # rm exp/${title}/record.txt
+#      done
+# done

@@ -1,6 +1,9 @@
 from collections import defaultdict
 
-title   = 'exp/SepDACNN_a5_adapt'
+# title   = 'exp/SepCNN_naive'
+# monitor = 'test_src_uar'
+
+title   = 'exp/SepDACNN_a001_adapt'
 monitor = 'test_avg_uar'
 
 fold_dict = {}
@@ -33,7 +36,7 @@ for fold in sorted_folds:
     print(f'{fold:<27}', end=' ')
     for key, val in fold_dict[fold].items():
         print(f'{key}: {val:5.2f},', end=' ')
-    print('')
+    print('\b\b ')
 
 print('')
 score_dict = defaultdict(float)
@@ -42,24 +45,24 @@ for i, fold in enumerate(sorted_folds):
         score_dict[key] += val
 
     if i == 2:
-        print(f'{"Top3":<27}', end=' ')
+        print(f'{"Top 3":<27}', end=' ')
         for key, val in score_dict.items():
             print(f'{key}: {val / 3:5.2f},', end=' ')
-        print('')
+        print('\b\b ')
 
     if i == 4:
-        print(f'{"Top5":<27}', end=' ')
+        print(f'{"Top 5":<27}', end=' ')
         for key, val in score_dict.items():
             print(f'{key}: {val / 5:5.2f},', end=' ')
-        print('')
+        print('\b\b ')
     
     if i == 9:    
-        print(f'{"Top10":<27}', end=' ')
+        print(f'{"Top 10":<27}', end=' ')
         for key, val in score_dict.items():
             print(f'{key}: {val / 10:5.2f},', end=' ')
-        print('')
+        print('\b\b ')
 
-print(f'{"All16":<27}', end=' ')
+print(f'{"All 16":<27}', end=' ')
 for key, val in score_dict.items():
     print(f'{key}: {val / 16:5.2f},', end=' ')
-print('')
+print('\b\b ')
