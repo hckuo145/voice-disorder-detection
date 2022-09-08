@@ -1,27 +1,6 @@
-# mode=target
-# model=SepCNN
-# kfold_idx=0
-
-# device=cuda:$((kfold_idx%8))
-# echo ${device}
-
-# for ((test_fold=0; test_fold<5; test_fold++))
-# do
-#      title=${model}_${mode}_k${kfold_idx}f${test_fold}
-#      echo -e "\n${title}"
-
-#      cmd="--title ${title} --device ${device} --batch 30    \
-#           --kfold_idx ${kfold_idx} --test_fold ${test_fold} \
-#           --model_conf config/model/${model}.yaml           \
-#           --hyper_conf config/hyper/${mode}.yaml"
-
-#      python main.py --train ${cmd}
-# done
-
-
-mode=finetune
-model=SepCNN
-kfold_idx=0
+mode=adapt
+model=SepDACNN_a4
+kfold_idx=15
 
 device=cuda:$((kfold_idx%8))
 echo ${device}
@@ -29,17 +8,38 @@ echo ${device}
 for ((test_fold=0; test_fold<5; test_fold++))
 do
      title=${model}_${mode}_k${kfold_idx}f${test_fold}
-     params={exp_dir}/${model}_naive_k${kfold_idx}f${test_fold}/seed{seed}/ckpt/best_valid_src_uar.pt
      echo -e "\n${title}"
 
      cmd="--title ${title} --device ${device} --batch 30    \
           --kfold_idx ${kfold_idx} --test_fold ${test_fold} \
           --model_conf config/model/${model}.yaml           \
-          --hyper_conf config/hyper/${mode}.yaml            \
-          --params ${params}"
+          --hyper_conf config/hyper/${mode}.yaml"
 
-     python main.py --train --finetune ${cmd}
+     python main.py --train ${cmd}
 done
+
+
+# mode=finetune
+# model=SepCNN
+# kfold_idx=15
+
+# device=cuda:$((kfold_idx%8))
+# echo ${device}
+
+# for ((test_fold=0; test_fold<5; test_fold++))
+# do
+#      title=${model}_${mode}_k${kfold_idx}f${test_fold}
+#      params={exp_dir}/${model}_naive_k${kfold_idx}f${test_fold}/seed{seed}/ckpt/best_valid_src_uar.pt
+#      echo -e "\n${title}"
+
+#      cmd="--title ${title} --device ${device} --batch 30    \
+#           --kfold_idx ${kfold_idx} --test_fold ${test_fold} \
+#           --model_conf config/model/${model}.yaml           \
+#           --hyper_conf config/hyper/${mode}.yaml            \
+#           --params ${params}"
+
+#      python main.py --train --finetune ${cmd}
+# done
 
 
 # mode=adapt
