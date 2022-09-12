@@ -73,7 +73,8 @@ if args.train:
 
     criterion = {
         'cls': nn.CrossEntropyLoss().to(device),
-        'dmn': nn.CrossEntropyLoss(torch.FloatTensor(args.weight) if args.weight is not None else None).to(device)
+        'dmn': nn.CrossEntropyLoss(torch.FloatTensor(args.weight) if args.weight is not None else None).to(device),
+        'mmd': nn.MSELoss().to(device)
     }
 
     for seed in range(200):

@@ -109,17 +109,7 @@ class CNN(nn.Module):
         rev_hidden = GradReverse.apply(hidden, self.alpha)
         dmn_output = self.dmn_linear(rev_hidden)
 
-        return cls_output, dmn_output
-
-    def return_hidden(self, x):
-        x = self.downpool(x)
-
-        x = x.unsqueeze(1)
-        hidden = self.conv(x)
-
-        hidden = hidden.flatten(start_dim=1)
-
-        return hidden
+        return cls_output, dmn_output, hidden
 
     def num_params(self): 
         return sum([ param.numel() for name, param in self.named_parameters() if 'dmn_linear' not in name ])

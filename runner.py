@@ -109,9 +109,9 @@ class Runner():
         source_x, source_cls, source_dmn = source_batch
         target_x, target_cls, target_dmn = target_batch
 
-        pred_source_cls, pred_source_dmn = self.model(source_x)
+        pred_source_cls, pred_source_dmn, source_feat = self.model(source_x)
         if mode != 'naive':
-            pred_target_cls, pred_target_dmn = self.model(target_x)
+            pred_target_cls, pred_target_dmn, target_feat = self.model(target_x)
 
         source_cls_loss = self.criterion['cls'](pred_source_cls, source_cls)
         if   mode == 'joint':    
@@ -119,6 +119,8 @@ class Runner():
         elif mode == 'adapt':            
             source_dmn_loss = self.criterion['dmn'](pred_source_dmn, source_dmn)
             target_dmn_loss = self.criterion['dmn'](pred_target_dmn, target_dmn)
+        elif mode == 'MMD':
+            mmd_loss = self.criterion['mmd'](torch.mean(source_feat, dim=0), torch.mean(target_feat, dim=0))
 
         if   mode == 'naive':
             loss = source_cls_loss
@@ -126,6 +128,8 @@ class Runner():
             loss = (source_cls_loss + target_cls_loss) / 2
         elif mode == 'adapt':
             loss = source_cls_loss + (source_dmn_loss + target_dmn_loss) / 2
+        elif mode == 'MMD':
+            loss = source_cls_loss + mmd_loss
         
         self.optimizer.zero_grad()
         loss.backward()
@@ -138,6 +142,8 @@ class Runner():
         elif mode == 'adapt':            
             self.metrics['train/src_dmn_loss'] += source_dmn_loss.item()
             self.metrics['train/tgt_dmn_loss'] += target_dmn_loss.item()
+        elif mode == 'MMD':
+            self.metrics['train/mmd_loss'] += mmd_loss.item()
 
 
     @torch.no_grad()
@@ -145,13 +151,14 @@ class Runner():
         source_x, source_cls, source_dmn = source_batch
         target_x, target_cls, target_dmn = target_batch
 
-        pred_source_cls, pred_source_dmn = self.model(source_x)
-        pred_target_cls, pred_target_dmn = self.model(target_x)
+        pred_source_cls, pred_source_dmn, source_feat = self.model(source_x)
+        pred_target_cls, pred_target_dmn, target_feat = self.model(target_x)
 
         source_cls_loss = self.criterion['cls'](pred_source_cls, source_cls)
         source_dmn_loss = self.criterion['dmn'](pred_source_dmn, source_dmn)
         target_cls_loss = self.criterion['cls'](pred_target_cls, target_cls)
         target_dmn_loss = self.criterion['dmn'](pred_target_dmn, target_dmn)
+        mmd_loss        = self.criterion['mmd'](torch.mean(source_feat, dim=0), torch.mean(target_feat, dim=0))
 
         if   mode == 'naive':
             loss = source_cls_loss
@@ -159,12 +166,15 @@ class Runner():
             loss = (source_cls_loss + target_cls_loss) / 2
         elif mode == 'adapt':
             loss = source_cls_loss + (source_dmn_loss + target_dmn_loss) / 2
+        elif mode == 'MMD':
+            loss = source_cls_loss + mmd_loss
 
         self.metrics['valid/loss']         += loss.item() * len(source_x)
         self.metrics['valid/src_cls_loss'] += source_cls_loss.item() * len(source_x)
         self.metrics['valid/src_dmn_loss'] += source_dmn_loss.item() * len(source_x)
         self.metrics['valid/tgt_cls_loss'] += target_cls_loss.item() * len(source_x)
         self.metrics['valid/tgt_dmn_loss'] += target_dmn_loss.item() * len(source_x)
+        self.metrics['valid/mmd_loss']     += mmd_loss.item() * len(source_x)
 
         return pred_source_cls, pred_target_cls
 
@@ -245,8 +255,8 @@ class Runner():
             # source_x = source_x.to(self.device)
             # target_x = target_x.to(self.device)
             
-            pred_source_cls, _ = self.model(source_x)
-            pred_target_cls, _ = self.model(target_x)
+            pred_source_cls, _, _ = self.model(source_x)
+            pred_target_cls, _, _ = self.model(target_x)
             
             source_pred += list(torch.argmax(pred_source_cls, dim=1).cpu().numpy())
             target_pred += list(torch.argmax(pred_target_cls, dim=1).cpu().numpy())
