@@ -133,15 +133,14 @@ if args.test:
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
 
-        args.params = f'{args.exp_dir}/{args.title}/seed{args.seed}/ckpt/best_valid_avg_uar.pt'
-
         print(f'\n{args.title}, seed {args.seed}', flush=True)
 
         t1 = time.time()
         print('Start Testing ... ', end='', flush=True)
         
         runner = Runner(model, loader, device, args=args)
-        runner.test(args.params)
+        params = args.params.format(exp_dir=args.exp_dir, seed=args.seed)
+        runner.test(params)
 
         t2 = time.time()
         print(f'cost {int(t2 - t1)}s', flush=True)

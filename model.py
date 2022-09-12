@@ -111,6 +111,16 @@ class CNN(nn.Module):
 
         return cls_output, dmn_output
 
+    def return_hidden(self, x):
+        x = self.downpool(x)
+
+        x = x.unsqueeze(1)
+        hidden = self.conv(x)
+
+        hidden = hidden.flatten(start_dim=1)
+
+        return hidden
+
     def num_params(self): 
         return sum([ param.numel() for name, param in self.named_parameters() if 'dmn_linear' not in name ])
 
@@ -118,7 +128,7 @@ class CNN(nn.Module):
 
 if __name__ == '__main__':
     m1 = CNN(
-        input_size=[251, 127],
+        input_size=[127, 251],
         channels  =[16, 16, 16, 16, 16],
         n_class   =3,
         n_domain  =2,
@@ -129,7 +139,7 @@ if __name__ == '__main__':
     print(cnt1)
 
     m2 = CNN(
-        input_size  =[251, 127],
+        input_size  =[127, 251],
         channels    =[16, 16, 16, 16, 16],
         n_class     =3,
         n_domain    =2,
@@ -142,3 +152,13 @@ if __name__ == '__main__':
     print(cnt2)
     
     print(f'Compression Ratio: {(cnt1 - cnt2) / cnt1 * 100:4.2f}')
+
+    from thop import profile
+    
+    x = torch.randn(1, 127, 251)
+    
+    macs, params = profile(m1, inputs=(x, ))
+    print(macs, params)
+    
+    macs, params = profile(m2, inputs=(x, ))
+    print(macs, params)
